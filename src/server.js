@@ -1,4 +1,4 @@
-﻿const path = require("path");
+const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
 const cookieSession = require("cookie-session");
@@ -6,6 +6,7 @@ const { ensureAdmin, authenticate, setUserSettings, getUserSettings, getDecrypte
 
 dotenv.config();
 const app = express();
+app.set("trust proxy", 1);
 const PORT = Number(process.env.PORT || 3000);
 
 app.use(express.json());
@@ -148,3 +149,4 @@ ensureAdmin().then(function () {
     console.log("Server running on http://localhost:" + PORT);
   });
 });
+
