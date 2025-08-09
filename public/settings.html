@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Settings - Multi AI</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <a href="/">Home</a>
+      <a href="/settings.html">Settings</a>
+      <button id="logoutBtn">Logout</button>
+    </nav>
+
+    <h1>Settings</h1>
+
+    <div class="card">
+      <h3>OpenAI</h3>
+      <label>API Key (leave blank to keep unchanged, set "-" to clear)<br>
+        <input type="password" id="openaiKey" placeholder="sk-...">
+      </label><br><br>
+      <label>Model<br>
+        <input type="text" id="openaiModel" placeholder="gpt-4o-mini">
+      </label>
+    </div>
+
+    <div class="card">
+      <h3>Anthropic</h3>
+      <label>API Key (leave blank to keep unchanged, set "-" to clear)<br>
+        <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+      </label><br><br>
+      <label>Model<br>
+        <input type="text" id="anthropicModel" placeholder="claude-3-5-sonnet-latest">
+      </label>
+    </div>
+
+    <div class="card">
+      <h3>Gemini</h3>
+      <label>API Key (leave blank to keep unchanged, set "-" to clear)<br>
+        <input type="password" id="geminiKey" placeholder="AI Studio key">
+      </label><br><br>
+      <label>Model<br>
+        <input type="text" id="geminiModel" placeholder="gemini-1.5-pro-latest">
+      </label>
+    </div>
+
+    <button id="saveBtn">Save</button>
+    <div id="msg"></div>
+  </div>
+
+  <script>
+    async function me() {
+      const r = await fetch('/api/me');
+      if (!r.ok) { location.href = '/login.html'; }
+    }
+    async function load() {
+      const r = await fetch('/api/settings');
+      if (!r.ok) { location.href = '/login.html'; return; }
+      const s = await r.json();
+      document.getElementById('openaiModel').value = s.openaiModel || '';
+      document.getElementById('anthropicModel').value = s.anthropicModel || '';
+      document.getElementById('geminiModel').value = s.geminiModel || '';
+    }
+    async function save() {
+      const body = {};
+      const k1 = document.getElementById('openaiKey').value.trim();
+      const m1 = document.getElementById('openaiModel').value.trim();
+      const k2 = document.getElementById('anthropicKey').value.trim();
+      const m2 = document.getElementById('anthropicModel').value.trim();
+      const k3 = document.getElementById('geminiKey').value.trim();
+      const m3 = document.getElementById('geminiModel').value.trim();
+
+      if (k1) body.openaiKey = (k1 === '-') ? '' : k1;
+      if (m1) body.openaiModel = m1;
+      if (k2) body.anthropicKey = (k2 === '-') ? '' : k2;
+      if (m2) body.anthropicModel = m2;
+      if (k3) body.geminiKey = (k3 === '-') ? '' : k3;
+      if (m3) body.geminiModel = m3;
+
+      const r = await fetch('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const msg = document.getElementById('msg');
+      msg.className = '';
+      if (r.ok) { msg.textContent = 'Saved.'; msg.classList.add('ok'); }
+      else { msg.textContent = (await r.text()) || 'Error'; msg.classList.add('error'); }
+      document.getElementById('openaiKey').value = '';
+      document.getElementById('anthropicKey').value = '';
+      document.getElementById('geminiKey').value = '';
+    }
+    document.getElementById('saveBtn').onclick = save;
+    document.getElementById('logoutBtn').onclick = async () => { await fetch('/auth/logout', {method:'POST'}); location.href='/login.html'; };
+
+    me(); load();
+  </script>
+</body>
+</html>

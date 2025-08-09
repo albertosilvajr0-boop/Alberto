@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Multi AI Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <a href="/">Home</a>
+      <a href="/settings.html">Settings</a>
+      <button id="logoutBtn">Logout</button>
+    </nav>
+
+    <h1>Multi AI Dashboard</h1>
+    <div id="who"></div>
+
+    <div class="card">
+      <label>Prompt</label><br>
+      <textarea id="prompt" placeholder="Enter your prompt..."></textarea><br>
+      <div id="providers" style="margin:8px 0;"></div>
+      <button id="sendBtn">Send</button>
+      <div id="status"></div>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    async function me() {
+      const r = await fetch('/api/me');
+      if (!r.ok) { location.href = '/login.html'; return; }
+      const j = await r.json();
+      document.getElementById('who').textContent = 'Logged in as: ' + j.user.username;
+    }
+    async function loadAccounts() {
+      const r = await fetch('/api/accounts');
+      if (!r.ok) { location.href = '/login.html'; return; }
+      const j = await r.json();
+      const wrap = document.getElementById('providers');
+      if (!j.accounts.length) { wrap.textContent = 'No providers configured. Go to Settings.'; return; }
+      wrap.textContent = '';
+      j.accounts.forEach(function(a){
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = a.id;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + a.displayName + ' (' + a.model + ')'));
+        wrap.appendChild(label);
+        wrap.appendChild(document.createElement('br'));
+      });
+    }
+    async function send() {
+      const prompt = document.getElementById('prompt').value.trim();
+      const accountIds = Array.from(document.querySelectorAll('#providers input[type=checkbox]:checked')).map(function(b){return b.value;});
+      if (!prompt) { alert('Enter a prompt'); return; }
+      if (!accountIds.length) { alert('Pick at least one provider'); return; }
+      document.getElementById('status').textContent = 'Working...';
+      const r = await fetch('/api/prompt', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ prompt: prompt, accountIds: accountIds })
+      });
+      const out = document.getElementById('results');
+      if (!r.ok) {
+        out.innerHTML = '<div class="error">Error: ' + (await r.text()) + '</div>';
+      } else {
+        const data = await r.json();
+        out.innerHTML = data.results.map(function(res){
+          if (!res.ok) return '<div class="card"><b>' + res.provider + '</b><br><span class="error">Error: ' + res.error + '</span></div>';
+          return '<div class="card"><b>' + res.provider + '</b><br><pre>' + res.text.replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s])) + '</pre><div>Time: ' + res.ms + ' ms</div></div>';
+        }).join('');
+      }
+      document.getElementById('status').textContent = '';
+    }
+    document.getElementById('sendBtn').onclick = send;
+    document.getElementById('logoutBtn').onclick = async () => { await fetch('/auth/logout', {method:'POST'}); location.href='/login.html'; };
+
+    me(); loadAccounts();
+  </script>
+</body>
+</html>
